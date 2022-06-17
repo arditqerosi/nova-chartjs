@@ -68,10 +68,27 @@ class TotalRecordsController extends Controller
                 }
             }
             if ($unitOfMeasurement == 'day') {
-                if (isset($request->join)) {
+                if (isset($request->join) &&  !$advanceFilterSelected === 'YTD') {
                     $joinInformation = json_decode($request->join, true);
                     $query = $model::selectRaw('DATE(' . $xAxisColumn . ') AS cat, DATE(' . $xAxisColumn . ') AS catorder, sum(' . $calculation . ') counted' . $seriesSql)
                         ->join($joinInformation['joinTable'], $joinInformation['joinColumnFirst'], $joinInformation['joinEqual'], $joinInformation['joinColumnSecond']);
+                } else if ($advanceFilterSelected === 'YTD') {
+                    if (isset($request->join)) {
+                        $joinInformation = json_decode($request->join, true);
+                        if ($connectionName == 'pgsql') {
+                            $query = $model::selectRaw("to_char(" . $xAxisColumn . ", 'Mon YYYY') AS cat, to_char(" . $xAxisColumn . ", 'YYYY-MM') AS catorder, sum(" . $calculation . ") counted" . $seriesSql)
+                                ->join($joinInformation['joinTable'], $joinInformation['joinColumnFirst'], $joinInformation['joinEqual'], $joinInformation['joinColumnSecond']);
+                        } else {
+                            $query = $model::selectRaw('DATE_FORMAT(' . $xAxisColumn . ', "%b %Y") AS cat, DATE_FORMAT(' . $xAxisColumn . ', "%Y-%m") AS catorder, sum(' . $calculation . ') counted' . $seriesSql)
+                                ->join($joinInformation['joinTable'], $joinInformation['joinColumnFirst'], $joinInformation['joinEqual'], $joinInformation['joinColumnSecond']);
+                        }
+                    } else {
+                        if ($connectionName == 'pgsql') {
+                            $query = $model::selectRaw("to_char(" . $xAxisColumn . ", 'Mon YYYY') AS cat, to_char(" . $xAxisColumn . ", 'YYYY-MM') AS catorder, sum(" . $calculation . ") counted" . $seriesSql);
+                        } else {
+                            $query = $model::selectRaw('DATE_FORMAT(' . $xAxisColumn . ', "%b %Y") AS cat, DATE_FORMAT(' . $xAxisColumn . ', "%Y-%m") AS catorder, sum(' . $calculation . ') counted' . $seriesSql);
+                        }
+                    }
                 } else {
                     $query = $model::selectRaw('DATE(' . $xAxisColumn . ') AS cat, DATE(' . $xAxisColumn . ') AS catorder, sum(' . $calculation . ') counted' . $seriesSql);
                 }
@@ -244,7 +261,7 @@ class TotalRecordsController extends Controller
         }
         if ($request->options) {
             $filters = json_decode($request->options, true);
-            if ($filters["uom"] === 'day') {
+            if ($filters["uom"] === 'day' && $advanceFilterSelected !== 'YTD') {
                 $xAxisModified = [];
                 foreach ($xAxis as $x) {
                     $xAxisModified[] = (Carbon::make($x)->format('d-m-Y'));
