@@ -248,7 +248,7 @@ class TotalRecordsController extends Controller
             $filters = json_decode($request->options, true);
             if ($filters["uom"] === 'day') {
                 $xAxisModified = [];
-                foreach ($xAxis as &$x) {
+                foreach ($xAxis as $x) {
                     $xAxisModified[] = (Carbon::make($x)->format('d-m-Y'));
                 }
             }
@@ -256,7 +256,7 @@ class TotalRecordsController extends Controller
         return response()->json(
             [
                 'dataset' => [
-                    'xAxis'  => $xAxis,
+                    'xAxis'  => $xAxisModified ?? $xAxis,
                     'yAxis'  => $yAxis
                 ]
             ]
